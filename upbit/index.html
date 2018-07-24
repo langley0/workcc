@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="stx-chart.css" media="screen" />
+    <script type="text/javascript" src="chartiq.js"></script>
+    <script type="text/javascript" src="addOns.js"></script>
+    <script src="https://jsfiddle.chartiq.com/chart/js/thirdparty/splines.js"></script>
+    <style>
+        .stx-panel-title {
+            display: none;
+        }
+
+        .stx_jump_today.home {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body style="margin:0; padding:0; background: transparent;">
+    <div id="main" style="width:800px;height:300px"></div>
+    <script type="text/javascript">
+        // 차트iq 를 초기화한다
+        var stxx = new CIQ.ChartEngine({
+            container: document.getElementById('main'),
+            layout: {
+                chartType: 'mountain',
+                crosshair: true,
+                interval: 'tick',
+                candleWidth: 3,
+            }
+        });
+        stxx.allowScroll = false;
+        stxx.allowZoom = false;
+        CIQ.Animation(stxx, {tension:0.3}); 
+        stxx.chart.xAxis.timeUnit = CIQ.MILLISECOND
+        stxx.newChart("TEST", [], null, function() { 
+
+            const UUID = "3413a9b6-8ee9-11e8-9eb6-529269fb1459"
+            const ws = new WebSocket("wss://api.upbit.com/websocket/v1");
+            ws.onopen = function open() {
+                const initMsg = [{"ticket":UUID},{"type":"trade","codes":["KRW-BTC"],"isOnlyRealtime": true},{"format":"SIMPLE"}];
+                ws.send(JSON.stringify(initMsg));
+            };
+            ws.onmessage  = function incoming(event) {
+                const reader = new FileReader();
+                reader.onload = function(event){
+                    const obj = JSON.parse(reader.result);
+                    stxx.updateChartData({  
+                        "DT": new Date(obj.tms),
+                        "Last": obj.tp,
+                        "Volume": obj.tv
+                    }, 
+                    null,
+                    {useAsLastSale: {aggregatedVolume:true}});
+                };
+                reader.readAsText(event.data);
+            };
+        });
+    </script>
+</body>
+
+</html>
